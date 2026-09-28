@@ -1,0 +1,1 @@
+Java-Spring-based web app for learning and accessing cards of Chinese words.
