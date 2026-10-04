@@ -38,7 +38,6 @@ public class MainController {
   public String login(@RequestParam String name, @RequestParam String password, Model model, HttpSession session) {
     if (userService.login(name, password)) {
       session.setAttribute("name", name);
-      session.setAttribute("password", password);
       return "redirect:/";
     }
     model.addAttribute("error", "Invalid credentials");
