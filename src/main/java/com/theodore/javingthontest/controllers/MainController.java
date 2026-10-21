@@ -43,4 +43,10 @@ public class MainController {
     model.addAttribute("error", "Invalid credentials");
     return "login";
   }
+
+  @GetMapping("/review")
+  public String review(Model model) {
+    model.addAttribute("title", "Review page");
+    return "review";
+  }
 }
