@@ -436,11 +436,13 @@
     'use strict';
 
     const API = {
-      nextCard: '/api/cards/random',
-      review:   '/api/reviews'
+      cards:  '/api/cards/random',
+      review: '/api/reviews'
     };
 
-    /* grade: 1 = forgot, 2 = partial, 3 = remember */
+    /* How many cards to request per batch (server default is 20 anyway). */
+    const BATCH_SIZE = 20;
+
     const RATINGS = {
       forgot:   { grade: 1, label: 'Forgot' },
       partial:  { grade: 2, label: 'Partial' },
@@ -454,7 +456,7 @@
       x: 'other'
     };
 
-    /* For offline test run. */
+    /* Test cards. */
     const SAMPLE_CARDS = [
       {
         simplified: '好吃',
@@ -527,12 +529,15 @@
 
     /* ---------------- State ---------------- */
     const state = {
-      card: null,
+      deck: [],            // cards remaining in the current batch
+      batchTotal: 0,       // size of the batch as received
+      card: null,          // card currently on screen
       revealed: false,
       loading: false,
       finished: false,
       startTime: 0,
       shown: 0,
+      lastRating: null,
       results: { forgot: 0, partial: 0, remember: 0 }
     };
 
@@ -541,6 +546,7 @@
       return r.forgot + r.partial + r.remember;
     };
 
+    /* ---------------- Tiny DOM helpers ---------------- */
     function el(tag, cls, text) {
       const node = document.createElement(tag);
       if (cls) node.className = cls;
@@ -552,7 +558,6 @@
       return el('span', 'chip' + (cls ? ' ' + cls : ''), text);
     }
 
-    /* ---------------- Keyboard hint (state-aware) ---------------- */
     const KBD_HINTS = {
       rate: '<kbd>1</kbd> forgot · <kbd>2</kbd> partial · <kbd>3</kbd> remember',
       next: '<kbd>Space</kbd> next card'
@@ -569,9 +574,7 @@
       }
     }
 
-    /* ---------------- Card loading ---------------- */
-    let localDeck = null;
-
+    /* Batch loading */
     function shuffle(arr) {
       for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -580,34 +583,39 @@
       return arr;
     }
 
-    /* Draws each sample card at most once, then reports exhaustion. */
-    function localCard() {
-      if (!localDeck) localDeck = shuffle(SAMPLE_CARDS.slice());
-      return localDeck.length ? localDeck.pop() : null;
-    }
-
-    /* Returns a card, or null when there is nothing left to study. */
-    async function fetchCard() {
+    /* One request -> array of cards (or [] when there is nothing to study). */
+    async function fetchBatch() {
       try {
-        const res = await fetch(API.nextCard, { headers: { Accept: 'application/json' } });
+        const res = await fetch(`${API.cards}?count=${BATCH_SIZE}`, {
+          headers: { Accept: 'application/json' }
+        });
 
-        if (res.status === 204) return null;
+        // A proper "nothing to study" answer.
+        if (res.status === 204) return [];
+
+        // 404 / 500 / SPA HTML fallbacks mean the endpoint isn't there yet:
+        // use the local sample deck instead of ending the session.
         if (!res.ok) throw new Error('HTTP ' + res.status);
 
-        const text = await res.text();
-        if (!text || !text.trim()) return null;   // empty body = done
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('json')) {
+          throw new Error('not JSON (' + (contentType || 'no content-type') + ')');
+        }
 
-        const card = JSON.parse(text);
-        if (!card || !card.simplified) throw new Error('Malformed card');
-        return card;
+        const data = await res.json();
+
+        if (Array.isArray(data)) {
+          return data.filter(card => card && card.simplified);
+        }
+
+        throw new Error('unexpected payload shape');
       } catch (err) {
-        // Network/server error -> dev fallback deck (which can also run out).
-        console.info('[test-run] falling back to local sample cards —', err.message);
-        return localCard();
+        console.info('[test-run] falling back to local sample deck —', err.message);
+        return shuffle(SAMPLE_CARDS.slice());
       }
     }
 
-    /* ---------------- Rendering the answer ---------------- */
+    /* Full card */
     function formBlock(form, card) {
       const box = el('div', 'form-block');
 
@@ -686,10 +694,27 @@
       return frag;
     }
 
-    /* ---------------- Flow ---------------- */
-    async function showNext() {
-      if (state.loading || state.finished) return;
+    async function init() {
       state.loading = true;
+      promptEl.textContent = '…';
+      hintEl.hidden = true;
+      counterEl.textContent = 'Loading…';
+
+      const cards = await fetchBatch();
+      state.deck = cards;
+      state.batchTotal = cards.length;
+      state.loading = false;
+
+      if (!cards.length) {
+        showSummary();
+        return;
+      }
+
+      showNext();
+    }
+
+    function showNext() {
+      if (state.loading || state.finished) return;
 
       promptEl.textContent = '…';
       hintEl.hidden = true;
@@ -699,16 +724,15 @@
       nextControls.hidden = true;
       setKbdHint(null);
 
-      const card = await fetchCard();
-      state.loading = false;
-
-      if (!card) {                 // deck exhausted -> summary screen
+      const card = state.deck.shift();   // pull from the loaded batch
+      if (!card) {                       // batch exhausted
         showSummary();
         return;
       }
 
       state.card = card;
       state.revealed = false;
+      state.lastRating = null;
       state.startTime = performance.now();
       state.shown++;
 
@@ -754,10 +778,14 @@
     }
 
     function updateCounter() {
-      counterEl.textContent = `Card ${state.shown} · ${reviewedCount()} reviewed`;
+      const reviewed = reviewedCount();
+      const total = state.batchTotal;
+      counterEl.textContent = total
+        ? `Card ${state.shown} / ${total} · ${reviewed} reviewed`
+        : `${reviewed} reviewed`;
     }
 
-    /* ---------------- Summary screen ---------------- */
+    /* Summary screen */
     function showSummary() {
       state.finished = true;
 
@@ -781,8 +809,6 @@
       counterEl.textContent = 'Session complete';
       summaryEl.hidden = false;
     }
-
-    /* ---------------- Sending the result back ---------------- */
     const offlineQueue = [];
 
     async function submitReview(payload) {
@@ -800,7 +826,7 @@
       }
     }
 
-    /* ---------------- Events ---------------- */
+    /* Events */
     ratingControls.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-rating]');
       if (btn) rate(btn.dataset.rating);
@@ -812,7 +838,6 @@
       if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
       if (state.loading || state.finished) return;
 
-      // Let a focused button handle Enter/Space itself.
       const onButton = document.activeElement && document.activeElement.tagName === 'BUTTON';
       if ((e.key === 'Enter' || e.key === ' ') && onButton) return;
 
@@ -831,7 +856,7 @@
       }
     });
 
-    showNext();
+    init();
   })();
   </script>
 
