@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.theodore</groupId>
-	<artifactId>javingthontest</artifactId>
+	<artifactId>mandarinsrs</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>javingthontest</name>
+	<name>mandarinsrs</name>
 	<description/>
 	<url/>
 	<licenses>

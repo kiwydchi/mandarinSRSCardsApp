@@ -1,4 +1,4 @@
-package com.theodore.javingthontest.controllers;
+package com.theodore.mandarinsrs.controllers;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.theodore.javingthontest.repository.CardRepository;
+import com.theodore.mandarinsrs.repository.CardRepository;
 
 import tools.jackson.databind.JsonNode;
 

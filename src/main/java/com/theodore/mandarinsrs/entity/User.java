@@ -1,4 +1,4 @@
-package com.theodore.javingthontest.entity;
+package com.theodore.mandarinsrs.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

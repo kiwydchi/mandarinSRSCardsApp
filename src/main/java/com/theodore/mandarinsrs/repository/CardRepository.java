@@ -1,4 +1,4 @@
-package com.theodore.javingthontest.repository;
+package com.theodore.mandarinsrs.repository;
 
 import java.io.InputStream;
 import java.util.List;
@@ -26,7 +26,7 @@ public class CardRepository {
 
   @PostConstruct
   void load() throws Exception {
-    try (InputStream in = new ClassPathResource("com/theodore/javingthontest/dict/hsk.json").getInputStream()) {
+    try (InputStream in = new ClassPathResource("com/theodore/mandarinsrs/dict/hsk.json").getInputStream()) {
       List<JsonNode> list = mapper.readValue(in, new TypeReference<List<JsonNode>>() {});
       bySimplified = list.stream().collect(Collectors.toUnmodifiableMap(
           n -> n.get("simplified").asString(),

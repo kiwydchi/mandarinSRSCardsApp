@@ -1,10 +1,10 @@
-package com.theodore.javingthontest.service;
+package com.theodore.mandarinsrs.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.theodore.javingthontest.entity.User;
-import com.theodore.javingthontest.repository.UserRepository;
+import com.theodore.mandarinsrs.entity.User;
+import com.theodore.mandarinsrs.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
 

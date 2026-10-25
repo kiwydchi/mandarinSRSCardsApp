@@ -1,10 +1,10 @@
-package com.theodore.javingthontest;
+package com.theodore.mandarinsrs;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class JavingthontestApplicationTests {
+class MandarinSRSApplicationTests {
 
 	@Test
 	void contextLoads() {
