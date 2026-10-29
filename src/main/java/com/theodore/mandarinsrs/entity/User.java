@@ -10,25 +10,25 @@ import jakarta.persistence.Table;
 public class User {
 
     @Id
-    @Column(name="name", nullable=false, length=30)
-    private String name;
+    @Column(name="username", nullable=false, length=30)
+    private String username;
 
-    @Column(name="password", nullable=false, length=30)
+    @Column(name="password", nullable=false, length=60)
     private String password;
 
     public User() {}
 
-    public User(String name, String password) {
-        this.name = name;
+    public User(String username, String password) {
+        this.username = username;
         this.password = password;
     }
 
-    public String getName() {
-        return name;
+    public String getUsername() {
+        return username;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getPassword() {

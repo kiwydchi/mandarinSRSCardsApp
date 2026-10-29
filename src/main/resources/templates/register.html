@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title th:text="|${title}|"></title>
+  <link rel="stylesheet" th:href="@{/styles.css}">
+</head>
+
+<body>
+  <main class="square">
+    <h1 class="site-title">知路</h1>
+
+    <form th:action="@{/register}" method="post">
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text"
+               placeholder="Enter your username"
+               autocomplete="username" required />
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password"
+               placeholder="Enter your password"
+               autocomplete="current-password" required />
+      </div>
+
+      <div class="field">
+        <label for="passwordConfirm">Confirm password</label>
+        <input name="passwordConfirm" type="password"
+               placeholder="Enter your password again"
+               autocomplete="current-password" required />
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Register</button>
+        <a class="btn btn-secondary" th:href="@{/}">Back</a>
+      </div>
+    </form>
+  </main>
+
+</body>
+</html>

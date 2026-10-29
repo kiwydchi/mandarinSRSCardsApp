@@ -535,7 +535,6 @@
       revealed: false,
       loading: false,
       finished: false,
-      startTime: 0,
       shown: 0,
       lastRating: null,
       results: { forgot: 0, partial: 0, remember: 0 }
@@ -733,7 +732,6 @@
       state.card = card;
       state.revealed = false;
       state.lastRating = null;
-      state.startTime = performance.now();
       state.shown++;
 
       promptEl.textContent = card.simplified || '—';
@@ -770,7 +768,6 @@
         simplified: state.card.simplified,
         level: state.card.level ?? null,
         grade: meta.grade,
-        responseMs: Math.round(performance.now() - state.startTime),
         reviewedAt: new Date().toISOString()
       });
 

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.theodore.mandarinsrs.service.UserService;
+import com.theodore.mandarinsrs.service.UsernameAlreadyExistsException;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -34,14 +35,43 @@ public class MainController {
     return "login";
   }
 
-  @PostMapping("/login")
-  public String login(@RequestParam String name, @RequestParam String password, Model model, HttpSession session) {
-    if (userService.login(name, password)) {
-      session.setAttribute("name", name);
-      return "redirect:/";
+  @GetMapping("/register")
+  public String register(Model model) {
+    model.addAttribute("title", "Register page");
+    return "register";
+  }
+
+  @PostMapping("/register")
+  public String submit(@RequestParam String username,
+                     @RequestParam String password,
+                     @RequestParam String passwordConfirm,
+                     Model model) {
+
+    /*if (username.isBlank() || username.length() < 3) {
+        model.addAttribute("error", "Username must be at least 3 characters");
+        model.addAttribute("username", username);
+        return "register";
     }
-    model.addAttribute("error", "Invalid credentials");
-    return "login";
+    if (password == null || password.length() < 8) {
+        model.addAttribute("error", "Password must be at least 8 characters");
+        model.addAttribute("username", username);
+        return "register";
+    }*/
+    if (!password.equals(passwordConfirm)) {
+        model.addAttribute("error", "Passwords do not match");
+        model.addAttribute("username", username);
+        return "register";
+    }
+
+    try {
+        userService.register(username, password);
+    } catch (UsernameAlreadyExistsException e) {
+        model.addAttribute("error", "That username is already taken");
+        model.addAttribute("username", username);
+        return "register";
+    }
+
+    return "redirect:/login?registered";
   }
 
   @GetMapping("/review")

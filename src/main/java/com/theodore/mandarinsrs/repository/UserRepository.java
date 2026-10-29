@@ -10,5 +10,5 @@ import com.theodore.mandarinsrs.entity.User;
 @Repository 
 public interface UserRepository extends JpaRepository<User, Integer> {
     
-    Optional<User> findByNameAndPassword(String name, String password);
+    Optional<User> findByUsername(String username);
 }
