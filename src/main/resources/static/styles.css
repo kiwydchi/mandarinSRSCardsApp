@@ -247,7 +247,6 @@ form {
   border: 1px solid currentColor;
 }
 .rating-pill.forgot   { color: var(--bad); }
-.rating-pill.partial  { color: var(--mid); }
 .rating-pill.remember { color: var(--ok); }
 
 .meta {
@@ -423,6 +422,7 @@ form {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: .6rem;
 }
+
 .controls.one { grid-template-columns: 1fr; }
 
 .btn:hover  { transform: translateY(-2px); }
@@ -430,6 +430,18 @@ form {
 .btn:focus-visible {
   outline: 3px solid var(--accent-2);
   outline-offset: 3px;
+}
+
+.controls.two {
+  display: flex;
+  gap: .75rem;
+  width: 100%;
+}
+
+.controls.two .btn {
+  flex: 1 1 0;      /* equal share regardless of label length */
+  min-width: 0;
+  justify-content: center;
 }
 
 .kbd-hint {

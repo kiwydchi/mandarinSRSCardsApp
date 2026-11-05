@@ -49,9 +49,12 @@
       <a class="btn btn-primary summary-btn" href="/">Back to main</a>
     </section>
 
-    <div class="controls" id="ratingControls" hidden>
+    <div class="controls one" id="revealControls">
+      <button class="btn btn-primary" type="button" id="showAnswerBtn">Show answer</button>
+    </div>
+
+    <div class="controls two" id="ratingControls" hidden>
       <button class="btn rate forgot"   type="button" data-rating="forgot">Forgot</button>
-      <button class="btn rate partial"  type="button" data-rating="partial">Partial</button>
       <button class="btn rate remember" type="button" data-rating="remember">Remember</button>
     </div>
 
@@ -59,7 +62,9 @@
       <button class="btn btn-primary" type="button" id="nextBtn">Next card</button>
     </div>
 
-    <p class="kbd-hint" id="kbdHint" hidden></p>
+    <p class="kbd-hint">
+      <kbd>Space</kbd> show answer · <kbd>1</kbd> forgot · <kbd>2</kbd> remember · <kbd>Space</kbd> next
+    </p>
   </main>
 
   <script>
@@ -75,9 +80,8 @@
     const BATCH_SIZE = 20;
 
     const RATINGS = {
-      forgot:   { grade: 1, label: 'Forgot' },
-      partial:  { grade: 2, label: 'Partial' },
-      remember: { grade: 3, label: 'Remember' }
+      forgot:   { grade: 0, label: 'Forgot' },
+      remember: { grade: 1, label: 'Remember' }
     };
 
     const POS_LABELS = {
@@ -105,6 +109,8 @@
     const statPartial    = document.getElementById('statPartial');
     const statForgot     = document.getElementById('statForgot');
     const statsEl        = document.getElementById('stats');
+    const showAnswerBtn  = document.getElementById('showAnswerBtn');
+    const revealControls = document.getElementById('revealControls');
 
     /* State */
     const state = {
@@ -150,7 +156,7 @@
     }
 
     const KBD_HINTS = {
-      rate: '<kbd>1</kbd> forgot · <kbd>2</kbd> partial · <kbd>3</kbd> remember',
+      rate: '<kbd>1</kbd> forgot · <kbd>2</kbd> remember',
       next: '<kbd>Space</kbd> next card'
     };
 
@@ -304,19 +310,20 @@
       showNext();
     }
 
-    function showNext() {
-      if (state.loading || state.finished) return;
+    async function showNext() {
+      if (state.loading) return;
+      state.loading = true;
 
       promptEl.textContent = '…';
       hintEl.hidden = true;
       revealEl.hidden = true;
       revealEl.replaceChildren();
+      revealControls.hidden = true;
       ratingControls.hidden = true;
       nextControls.hidden = true;
-      setKbdHint(null);
 
-      const card = state.deck.shift();   // pull from the loaded batch
-      if (!card) {                       // batch exhausted
+      const card = state.deck.shift();
+      if (!card) {
         showSummary();
         return;
       }
@@ -324,37 +331,39 @@
       state.card = card;
       state.revealed = false;
       state.lastRating = null;
+      state.startTime = performance.now();
       state.shown++;
 
       promptEl.textContent = card.simplified || '—';
       hintEl.hidden = false;
-      ratingControls.hidden = false;
-      setKbdHint('rate');
-      updateCounter();
-    }
+      hintEl.textContent = 'Try to recall it, then reveal the answer.';
+      revealControls.hidden = false;
+      counterEl.textContent = `Card ${state.shown} · ${state.reviewed} reviewed`;
 
+      state.loading = false;
+    }
     function reveal() {
       if (state.revealed || !state.card) return;
       state.revealed = true;
 
       hintEl.hidden = true;
-      revealEl.replaceChildren(buildReveal(state.card, state.lastRating));
+      revealEl.replaceChildren(buildReveal(state.card, null));
       revealEl.hidden = false;
-      ratingControls.hidden = true;
-      nextControls.hidden = false;
-      setKbdHint('next');
-      nextBtn.focus({ preventScroll: true });
+      revealControls.hidden = true;
+      ratingControls.hidden = false;
     }
 
     function rate(rating) {
-      if (state.revealed || state.finished || !state.card) return;
+      if (!state.revealed || state.lastRating || !state.card) return;
 
       const meta = RATINGS[rating];
       if (!meta) return;
 
       state.lastRating = rating;
-      state.results[rating] += 1;
-      updateCounter();
+      state.reviewed++;
+      counterEl.textContent = `Card ${state.shown} · ${state.reviewed} reviewed`;
+
+      revealEl.prepend(el('div', 'rating-pill ' + rating, meta.label));
 
       submitReview({
         simplified: state.card.simplified,
@@ -363,7 +372,9 @@
         reviewedAt: new Date().toISOString().slice(0, 19).replace('T', ' ')
       });
 
-      reveal();
+      ratingControls.hidden = true;
+      nextControls.hidden = false;
+      nextBtn.focus({ preventScroll: true });
     }
 
     function updateCounter() {
@@ -426,32 +437,40 @@
       const btn = e.target.closest('[data-rating]');
       if (btn) rate(btn.dataset.rating);
     });
-
+    
+    showAnswerBtn.addEventListener('click', reveal);
     nextBtn.addEventListener('click', showNext);
 
     document.addEventListener('keydown', (e) => {
-      if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
-      if (state.loading || state.finished) return;
+    if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
 
-      const onButton = document.activeElement && document.activeElement.tagName === 'BUTTON';
-      if ((e.key === 'Enter' || e.key === ' ') && onButton) return;
+    const onButton = document.activeElement && document.activeElement.tagName === 'BUTTON';
+    if ((e.key === 'Enter' || e.key === ' ') && onButton) return;
 
-      if (state.revealed) {
-        if (e.key === ' ' || e.key === 'Enter') {
-          e.preventDefault();
-          showNext();
-        }
-        return;
-      }
-
-      const keyMap = { '1': 'forgot', '2': 'partial', '3': 'remember' };
-      if (keyMap[e.key]) {
+    // Stage 1: answer still hidden — reveal it.
+    if (!state.revealed) {
+      if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
-        rate(keyMap[e.key]);
+        reveal();
       }
-    });
+      return;
+    }
 
-    init();
+    // Stage 2: answer visible, not yet rated.
+    if (!state.lastRating) {
+      if (e.key === '1') { e.preventDefault(); rate('forgot'); }
+      if (e.key === '2') { e.preventDefault(); rate('remember'); }
+      return;
+    }
+
+    // Stage 3: rated — move on.
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      showNext();
+    }
+  });
+
+  init();
   })();
   </script>
 
