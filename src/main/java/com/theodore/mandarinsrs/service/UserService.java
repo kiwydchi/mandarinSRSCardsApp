@@ -38,13 +38,6 @@ public class UserService implements UserDetailsService {
     public void save(User user) {
         userRepository.save(user);
     }
-    
-    /*public User login(String username) {
-        User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
-
-        return user;
-    }*/
 
     public User register(String username, String rawPassword) {
         if (userRepository.findByUsername(username).isPresent()) {

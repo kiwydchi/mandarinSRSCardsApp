@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.theodore.mandarinsrs.repository.CardRepository;
+import com.theodore.mandarinsrs.service.CardService;
 
 import tools.jackson.databind.JsonNode;
 
@@ -22,15 +22,15 @@ import tools.jackson.databind.JsonNode;
 @RequestMapping("/api/cards")
 public class RestAPIController {
 
-  private final CardRepository cardRepository;
+  private final CardService cardService;
 
-  public RestAPIController(CardRepository cardRepository) {
-    this.cardRepository = cardRepository;
+  public RestAPIController(CardService cardService) {
+    this.cardService = cardService;
   }
 
   @GetMapping("/{simplified}")
   public ResponseEntity<JsonNode> getWord(@PathVariable String simplified) {
-    return cardRepository.findBySimplified(simplified)
+    return cardService.findBySimplified(simplified)
         .map(body -> ResponseEntity.ok()
             .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic())
             .body(body))
@@ -40,7 +40,7 @@ public class RestAPIController {
   @GetMapping("/random")
   public ResponseEntity<List<JsonNode>> random(@RequestParam(defaultValue = "20") int count) {
 
-    List<JsonNode> all = cardRepository.findAll();
+    List<JsonNode> all = cardService.findAll();
     int n = Math.max(1, Math.min(count, 100));
     if (n >= all.size()) {
       return ResponseEntity.ok(all);
@@ -54,6 +54,6 @@ public class RestAPIController {
 
   @GetMapping
   public List<JsonNode> getAll() {
-    return cardRepository.findAll();
+    return cardService.findAll();
   }
 }

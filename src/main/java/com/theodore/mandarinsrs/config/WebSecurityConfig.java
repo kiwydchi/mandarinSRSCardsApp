@@ -8,6 +8,8 @@ import org.springframework.security.config.annotation.web.configurers.LogoutConf
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -20,6 +22,10 @@ class WebSecurityConfig {
 				.requestMatchers("/", "/home", "/login", "/register", "/error").permitAll()
 				.requestMatchers("/static/**", "/styles.css", "/css/**", "/js/**", "/images/**").permitAll()
 				.anyRequest().authenticated()
+			)
+			.csrf((csrf) -> csrf
+				.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+				.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
 			)
 			.formLogin((form) -> form
 				.loginPage("/login")

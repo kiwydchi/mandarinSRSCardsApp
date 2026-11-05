@@ -22,7 +22,7 @@ public class MainController {
 
   @GetMapping("/")
   public String home(Model model, HttpSession session) {
-    String name = (String) session.getAttribute("name");
+    String name = (String) session.getAttribute("username");
     model.addAttribute("name", name);
     model.addAttribute("title", "Home page");
     return "homepage";
@@ -46,17 +46,7 @@ public class MainController {
                      @RequestParam String password,
                      @RequestParam String passwordConfirm,
                      Model model) {
-
-    /*if (username.isBlank() || username.length() < 3) {
-        model.addAttribute("error", "Username must be at least 3 characters");
-        model.addAttribute("username", username);
-        return "register";
-    }
-    if (password == null || password.length() < 8) {
-        model.addAttribute("error", "Password must be at least 8 characters");
-        model.addAttribute("username", username);
-        return "register";
-    }*/
+    model.addAttribute("username", username);
     if (!password.equals(passwordConfirm)) {
         model.addAttribute("error", "Passwords do not match");
         model.addAttribute("username", username);
