@@ -62,9 +62,8 @@
       <button class="btn btn-primary" type="button" id="nextBtn">Next card</button>
     </div>
 
-    <p class="kbd-hint">
-      <kbd>Space</kbd> show answer · <kbd>1</kbd> forgot · <kbd>2</kbd> remember · <kbd>Space</kbd> next
-    </p>
+    <p class="kbd-hint" id="kbd-hint">
+      <kbd>Space</kbd> show answer / next · <kbd>1</kbd> forgot · <kbd>2</kbd> remember
   </main>
 
   <script>
@@ -76,7 +75,6 @@
       review: '/api/reviews/save'
     };
 
-    /* How many cards to request per batch (server default is 20 anyway). */
     const BATCH_SIZE = 20;
 
     const RATINGS = {
@@ -91,7 +89,7 @@
       x: 'other'
     };
 
-    /* DOM */
+    /* DOM — note the kbd hint id matches the markup: kbd-hint */
     const cardEl         = document.getElementById('card');
     const promptEl       = document.getElementById('prompt');
     const hintEl         = document.getElementById('hint');
@@ -100,7 +98,7 @@
     const ratingControls = document.getElementById('ratingControls');
     const nextControls   = document.getElementById('nextControls');
     const nextBtn        = document.getElementById('nextBtn');
-    const kbdHint        = document.getElementById('kbdHint');
+    const kbdHint        = document.getElementById('kbd-hint');   // fixed
 
     const summaryEl      = document.getElementById('summary');
     const summaryTitle   = document.getElementById('summaryTitle');
@@ -112,15 +110,16 @@
     const showAnswerBtn  = document.getElementById('showAnswerBtn');
     const revealControls = document.getElementById('revealControls');
 
-    /* State */
+    /* State — no more `reviewed` field, derived from results instead */
     const state = {
-      deck: [],            // cards remaining in the current batch
-      batchTotal: 0,       // size of the batch as received
-      card: null,          // card currently on screen
+      deck: [],
+      batchTotal: 0,
+      card: null,
       revealed: false,
       loading: false,
       finished: false,
       shown: 0,
+      startTime: 0,
       lastRating: null,
       results: { forgot: 0, partial: 0, remember: 0 }
     };
@@ -156,11 +155,13 @@
     }
 
     const KBD_HINTS = {
-      rate: '<kbd>1</kbd> forgot · <kbd>2</kbd> remember',
-      next: '<kbd>Space</kbd> next card'
+      reveal: '<kbd>Space</kbd> show answer',
+      rate:   '<kbd>1</kbd> forgot · <kbd>2</kbd> remember',
+      next:   '<kbd>Space</kbd> next card'
     };
 
     function setKbdHint(mode) {
+      if (!kbdHint) return;                    // belt and braces
       const html = KBD_HINTS[mode];
       if (html) {
         kbdHint.innerHTML = html;
@@ -171,7 +172,7 @@
       }
     }
 
-    /* Batch loading */
+    /* ---------------- Batch loading ---------------- */
     function shuffle(arr) {
       for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -180,18 +181,13 @@
       return arr;
     }
 
-    /* One request -> array of cards (or [] when there is nothing to study). */
     async function fetchBatch() {
       try {
         const res = await fetch(`${API.cards}?count=${BATCH_SIZE}`, {
           headers: { Accept: 'application/json' }
         });
 
-        // A proper "nothing to study" answer.
         if (res.status === 204) return [];
-
-        // 404 / 500 / SPA HTML fallbacks mean the endpoint isn't there yet:
-        // use the local sample deck instead of ending the session.
         if (!res.ok) throw new Error('HTTP ' + res.status);
 
         const contentType = res.headers.get('content-type') || '';
@@ -208,11 +204,11 @@
         throw new Error('unexpected payload shape');
       } catch (err) {
         console.info('[test-run] unable to find cards —', err.message);
-        return;
+        return [];                             // was `return;` → undefined
       }
     }
 
-    /* Full card */
+    /* ---------------- Card rendering ---------------- */
     function formBlock(form, card) {
       const box = el('div', 'form-block');
 
@@ -291,6 +287,7 @@
       return frag;
     }
 
+    /* ---------------- Flow ---------------- */
     async function init() {
       state.loading = true;
       promptEl.textContent = '…';
@@ -311,7 +308,7 @@
     }
 
     async function showNext() {
-      if (state.loading) return;
+      if (state.loading || state.finished) return;
       state.loading = true;
 
       promptEl.textContent = '…';
@@ -324,6 +321,7 @@
 
       const card = state.deck.shift();
       if (!card) {
+        state.loading = false;          // was left true
         showSummary();
         return;
       }
@@ -338,12 +336,15 @@
       hintEl.hidden = false;
       hintEl.textContent = 'Try to recall it, then reveal the answer.';
       revealControls.hidden = false;
-      counterEl.textContent = `Card ${state.shown} · ${state.reviewed} reviewed`;
+
+      updateCounter();
+      setKbdHint('reveal');
 
       state.loading = false;
     }
+
     function reveal() {
-      if (state.revealed || !state.card) return;
+      if (state.finished || state.revealed || !state.card) return;
       state.revealed = true;
 
       hintEl.hidden = true;
@@ -351,17 +352,17 @@
       revealEl.hidden = false;
       revealControls.hidden = true;
       ratingControls.hidden = false;
+      setKbdHint('rate');
     }
 
     function rate(rating) {
-      if (!state.revealed || state.lastRating || !state.card) return;
+      if (state.finished || !state.revealed || state.lastRating || !state.card) return;
 
       const meta = RATINGS[rating];
       if (!meta) return;
 
       state.lastRating = rating;
-      state.reviewed++;
-      counterEl.textContent = `Card ${state.shown} · ${state.reviewed} reviewed`;
+      state.results[rating] += 1;
 
       revealEl.prepend(el('div', 'rating-pill ' + rating, meta.label));
 
@@ -372,24 +373,27 @@
         reviewedAt: new Date().toISOString().slice(0, 19).replace('T', ' ')
       });
 
+      updateCounter();
       ratingControls.hidden = true;
       nextControls.hidden = false;
       nextBtn.focus({ preventScroll: true });
+      setKbdHint('next');
     }
 
     function updateCounter() {
       const reviewed = reviewedCount();
       const total = state.batchTotal;
       counterEl.textContent = total
-        ? `Card ${state.shown} / ${total} · ${reviewed} reviewed`
+        ? `Card ${Math.min(state.shown, total)} / ${total} · ${reviewed} reviewed`
         : `${reviewed} reviewed`;
     }
 
-    /* Summary screen */
+    /* ---------------- Summary ---------------- */
     function showSummary() {
       state.finished = true;
 
       cardEl.hidden = true;
+      revealControls.hidden = true;
       ratingControls.hidden = true;
       nextControls.hidden = true;
       setKbdHint(null);
@@ -409,6 +413,8 @@
       counterEl.textContent = 'Session complete';
       summaryEl.hidden = false;
     }
+
+    /* ---------------- Submitting ---------------- */
     const offlineQueue = [];
 
     function readCookie(name) {
@@ -421,7 +427,10 @@
         const res = await fetch(API.review, {
           method: 'POST',
           credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': readCookie('XSRF-TOKEN')},
+          headers: {
+            'Content-Type': 'application/json',
+            'X-XSRF-TOKEN': readCookie('XSRF-TOKEN')
+          },
           body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -432,45 +441,43 @@
       }
     }
 
-    /* Events */
+    /* ---------------- Events ---------------- */
     ratingControls.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-rating]');
       if (btn) rate(btn.dataset.rating);
     });
-    
+
     showAnswerBtn.addEventListener('click', reveal);
     nextBtn.addEventListener('click', showNext);
 
     document.addEventListener('keydown', (e) => {
-    if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (state.finished) return;                       // summary is showing
 
-    const onButton = document.activeElement && document.activeElement.tagName === 'BUTTON';
-    if ((e.key === 'Enter' || e.key === ' ') && onButton) return;
+      const onButton = document.activeElement && document.activeElement.tagName === 'BUTTON';
+      if ((e.key === 'Enter' || e.key === ' ') && onButton) return;
 
-    // Stage 1: answer still hidden — reveal it.
-    if (!state.revealed) {
+      if (!state.revealed) {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          reveal();
+        }
+        return;
+      }
+
+      if (!state.lastRating) {
+        if (e.key === '1') { e.preventDefault(); rate('forgot'); }
+        if (e.key === '2') { e.preventDefault(); rate('remember'); }
+        return;
+      }
+
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
-        reveal();
+        showNext();
       }
-      return;
-    }
+    });
 
-    // Stage 2: answer visible, not yet rated.
-    if (!state.lastRating) {
-      if (e.key === '1') { e.preventDefault(); rate('forgot'); }
-      if (e.key === '2') { e.preventDefault(); rate('remember'); }
-      return;
-    }
-
-    // Stage 3: rated — move on.
-    if (e.key === ' ' || e.key === 'Enter') {
-      e.preventDefault();
-      showNext();
-    }
-  });
-
-  init();
+    /* No trailing init() here — the bootstrap IIFE above already calls it. */
   })();
   </script>
 

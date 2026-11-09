@@ -1,11 +1,11 @@
 :root {
-      --bg:        #0b1020;
-      --accent:    #5eead4;
-      --accent-2:  #38bdf8;
-      --text:      #e8eefc;
-      --muted:     #93a4c4;
-      --field-bg:  rgba(255, 255, 255, 0.05);
-      --field-border: rgba(94, 234, 212, 0.25);
+      --bg:        #e6d4d4;
+      --accent:    #bb2626;
+      --accent-2:  #8d1414;
+      --text:      #000000;
+      --muted:     #1a1415;
+      --field-bg:  rgba(24, 6, 6, 0.05);
+      --field-border: rgba(194, 73, 51, 0.25);
     }
 
 * { box-sizing: border-box; }
@@ -21,8 +21,7 @@ body {
   padding: 2rem 1rem;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   color: var(--text);
-  background: radial-gradient(circle at 50% 0%,
-              #16224a 0%, var(--bg) 55%, #05070f 100%);
+  background: var(--bg);
 }
 
 .square {
@@ -84,12 +83,12 @@ form {
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.field input::placeholder { color: rgba(147, 164, 196, 0.5); }
+.field input::placeholder { color: rgba(0, 0, 0, 0.5); }
 
 .field input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.2);
+  box-shadow: 0 0 0 3px rgba(234, 103, 94, 0.2);
 }
 
 .actions {
@@ -117,13 +116,13 @@ form {
               background 0.18s ease, color 0.18s ease;
 }
 
-.rate.forgot   { border-color: rgba(251, 113, 133, .55); color: var(--bad); background: rgb(37, 12, 16);}
+.rate.forgot   { border-color: rgba(251, 113, 133, .55); background: rgb(37, 12, 16);}
 .rate.forgot:hover   { background: rgba(251, 113, 133, .12); }
 
-.rate.partial  { border-color: rgba(251, 191, 36, .55); color: var(--mid); background: rgb(66, 63, 30);}
+.rate.partial  { border-color: rgba(251, 191, 36, .55); background: rgb(66, 63, 30);}
 .rate.partial:hover  { background: rgba(251, 191, 36, .12); }
 
-.rate.remember { border-color: rgba(94, 234, 212, .6); color: var(--ok); background: rgb(18, 34, 49);}
+.rate.remember { border-color: rgba(94, 234, 212, .6); background: rgb(18, 34, 49);}
 .rate.remember:hover { background: rgba(94, 234, 212, .12); }
 
 .btn:focus-visible {
@@ -133,7 +132,7 @@ form {
 
 .btn-primary {
   border: 2px solid transparent;
-  color: #05121a;
+  color: #1a0505;
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
   box-shadow: 0 8px 24px rgba(56, 189, 248, 0.30);
 }
@@ -151,8 +150,8 @@ form {
 
 .btn-secondary:hover {
   transform: translateY(-2px);
-  background: rgba(94, 234, 212, 0.12);
-  box-shadow: 0 12px 30px rgba(94, 234, 212, 0.20);
+  background: rgba(234, 94, 101, 0.12);
+  box-shadow: 0 12px 30px rgba(102, 41, 41, 0.2);
 }
 
 .btn:active { transform: translateY(0); }
@@ -190,7 +189,7 @@ form {
   border: 3px solid var(--accent);
   border-radius: 24px;
   background: var(--panel);
-  box-shadow: 0 0 40px rgba(94, 234, 212, .15);
+  box-shadow: 0 0 40px rgba(234, 94, 106, 0.15);
   padding: 2.25rem 1.75rem;
   min-height: 300px;
   display: flex;
@@ -207,8 +206,8 @@ form {
   line-height: 1.1;
   letter-spacing: .06em;
   font-weight: 700;
-  color: #f4faff;
-  text-shadow: 0 0 28px rgba(94, 234, 212, .35);
+  color: #000000;
+  text-shadow: 0 0 28px rgba(34, 13, 13, 0.35);
   word-break: break-word;
 }
 
@@ -246,8 +245,6 @@ form {
   border-radius: 999px;
   border: 1px solid currentColor;
 }
-.rating-pill.forgot   { color: var(--bad); }
-.rating-pill.remember { color: var(--ok); }
 
 .meta {
   display: flex;
@@ -262,9 +259,9 @@ form {
   text-transform: uppercase;
   padding: .3rem .65rem;
   border-radius: 999px;
-  border: 1px solid rgba(94, 234, 212, .25);
-  background: rgba(94, 234, 212, .08);
-  color: #a9f2e4;
+  border: 1px solid rgba(234, 94, 94, 0.25);
+  background: rgba(234, 94, 106, 0.08);
+  color: #000000;
 }
 
 .chip.level {
@@ -319,7 +316,7 @@ form {
   font-size: .82rem;
   color: var(--muted);
 }
-.classifiers .label { color: rgba(147, 164, 196, .75); }
+.classifiers .label { color: rgba(0, 0, 0, 0.75); }
 
 .words {
   width: 100%;
@@ -349,8 +346,8 @@ form {
   flex-wrap: wrap;
   padding: .4rem .75rem;
   border-radius: 12px;
-  background: rgba(56, 189, 248, .08);
-  border: 1px solid rgba(56, 189, 248, .2);
+  background: rgba(184, 55, 55, 0.08);
+  border: 1px solid rgba(5, 1, 1, 0.2);
   font-size: .82rem;
 }
 
@@ -397,8 +394,8 @@ form {
   gap: .3rem;
   padding: .9rem .4rem;
   border-radius: 16px;
-  background: rgba(255, 255, 255, .03);
-  border: 1px solid rgba(94, 234, 212, .15);
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.15);
 }
 
 .stat-value { font-size: 1.75rem; font-weight: 800; line-height: 1.1; }
@@ -409,10 +406,6 @@ form {
   text-transform: uppercase;
   color: var(--muted);
 }
-
-.stat.remember .stat-value { color: var(--ok); }
-.stat.partial  .stat-value { color: var(--mid); }
-.stat.forgot   .stat-value { color: var(--bad); }
 
 .summary-btn { width: 100%; max-width: 260px; margin-top: .25rem; }
 
@@ -449,7 +442,7 @@ form {
   text-align: center;
   font-size: .72rem;
   letter-spacing: .06em;
-  color: rgba(147, 164, 196, .65);
+  color: rgba(0, 0, 0, 0.65);
 }
 
 .kbd-hint kbd {
@@ -457,8 +450,8 @@ form {
   font-size: .7rem;
   padding: .1rem .35rem;
   border-radius: 5px;
-  border: 1px solid rgba(147, 164, 196, .35);
-  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.05);
   color: var(--muted);
 }
 
