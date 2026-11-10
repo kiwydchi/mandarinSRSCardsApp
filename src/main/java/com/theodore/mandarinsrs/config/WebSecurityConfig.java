@@ -2,6 +2,7 @@ package com.theodore.mandarinsrs.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.LogoutConfigurer;
@@ -19,8 +20,9 @@ class WebSecurityConfig {
 	SecurityFilterChain securityFilterChain(HttpSecurity http) {
 		http
 			.authorizeHttpRequests((requests) -> requests
-				.requestMatchers("/", "/home", "/login", "/register", "/error").permitAll()
+				.requestMatchers("/", "/home", "/login", "/register", "/error", "/favicon.ico").permitAll()
 				.requestMatchers("/static/**", "/styles.css", "/css/**", "/js/**", "/images/**").permitAll()
+				.requestMatchers(HttpMethod.GET, "/test").permitAll()
 				.anyRequest().authenticated()
 			)
 			.csrf((csrf) -> csrf

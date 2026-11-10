@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, text/html; charset=UTF-8" />
   <title th:text="|${title}|"></title>
@@ -10,16 +10,28 @@
 
   <main class="square">
     <h1 class="site-title">知路</h1>
-    <p th:if="${name != null}">
-    Logged in as <span th:text="${name}">user</span>
+    <p sec:authorize="isAuthenticated()">
+    Logged in as <span id="username" sec:authentication="name"></span>
     </p>
 
     <div class="actions">
-      <a class="btn btn-primary" href="login">Log In</a>
-      <a class="btn btn-secondary" href="register">Register</a>
-      <a class="btn btn-secondary" href="review">Test Run</a>
+      <a class="btn btn-primary" id="login" href="login">Log In</a>
+      <a class="btn btn-secondary" id="register" href="register">Register</a>
+      <a class="btn btn-secondary" id="review" href="review" hidden>Review</a>
     </div>
   </main>
 
+  <script>
+    const loginEl         = document.getElementById('login');
+    const registerEl      = document.getElementById('register');
+    const reviewEl        = document.getElementById('review');
+    const usernameEl      = document.getElementById('username');
+
+    if (usernameEl.innerText != "") {
+      loginEl.hidden = true;
+      registerEl.hidden = true;
+      reviewEl.hidden = false;
+    }
+  </script>
 </body>
 </html>
