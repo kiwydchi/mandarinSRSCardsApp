@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.theodore</groupId>
-	<artifactId>javingthontest</artifactId>
+	<artifactId>mandarinsrs</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>javingthontest</name>
+	<name>mandarinsrs</name>
 	<description/>
 	<url/>
 	<licenses>
@@ -51,6 +51,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 		</dependency>
+		
+		<dependency>
+			<groupId>org.thymeleaf.extras</groupId>
+			<artifactId>thymeleaf-extras-springsecurity6</artifactId>
+		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -69,6 +74,11 @@
 			<version>8.0.23</version>
 		</dependency>
 
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>

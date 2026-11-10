@@ -1,0 +1,47 @@
+package com.theodore.mandarinsrs.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.LogoutConfigurer;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+
+@Configuration
+@EnableWebSecurity
+class WebSecurityConfig {
+
+	@Bean
+	SecurityFilterChain securityFilterChain(HttpSecurity http) {
+		http
+			.authorizeHttpRequests((requests) -> requests
+				.requestMatchers("/", "/home", "/login", "/register", "/error", "/favicon.ico").permitAll()
+				.requestMatchers("/static/**", "/styles.css", "/css/**", "/js/**", "/images/**").permitAll()
+				.requestMatchers(HttpMethod.GET, "/test").permitAll()
+				.anyRequest().authenticated()
+			)
+			.csrf((csrf) -> csrf
+				.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+				.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+			)
+			.formLogin((form) -> form
+				.loginPage("/login")
+                .defaultSuccessUrl("/")
+				.permitAll()
+			)
+			.logout(LogoutConfigurer::permitAll);
+
+		return http.build();
+	}
+
+	@Bean
+	PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+}

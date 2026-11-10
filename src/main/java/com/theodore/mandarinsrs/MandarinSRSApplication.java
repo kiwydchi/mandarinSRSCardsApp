@@ -1,12 +1,12 @@
-package com.theodore.javingthontest;
+package com.theodore.mandarinsrs;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class JavingthontestApplication {
+public class MandarinSRSApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(JavingthontestApplication.class, args);
+		SpringApplication.run(MandarinSRSApplication.class, args);
 	}
 }

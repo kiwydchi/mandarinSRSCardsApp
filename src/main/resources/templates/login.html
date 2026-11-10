@@ -1,17 +1,37 @@
-<!DOCTYPE HTML>
-<html xmlns:th="http://www.thymeleaf.org">
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title th:text="|${title}|"></title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title th:text="|${title}|"></title>
+  <link rel="stylesheet" th:href="@{/styles.css}">
 </head>
+
 <body>
-    <p th:text="|It's ${title}.|" />
-    <form action="/login" method="post">
-        <label for="fname">Username:</label><br>
-        <input type="text" id="name" name="name"><br>
-        <label for="lname">Password:</label><br>
-        <input type="password" id="password" name="password"><br><br>
-        <input type="submit" value="Submit">
+  <main class="square">
+    <h1 class="site-title">知路</h1>
+
+    <form th:action="@{/login}" method="post">
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text"
+               placeholder="Enter your username"
+               autocomplete="username" required />
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password"
+               placeholder="Enter your password"
+               autocomplete="current-password" required />
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Log In</button>
+        <a class="btn btn-secondary" href="/">Back</a>
+      </div>
     </form>
+  </main>
+
 </body>
 </html>

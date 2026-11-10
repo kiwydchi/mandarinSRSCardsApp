@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Review page</title>
+  <link rel="stylesheet" th:href="@{/styles.css}">
+
+  <style>
+    
+  </style>
+</head>
+
+<body>
+
+  <main class="stage">
+    <header class="topbar">
+      <a class="site-title" href="/">知路</a>
+      <span class="counter" id="counter">Card 0 · 0 reviewed</span>
+    </header>
+
+    <!-- Main study card -->
+    <section class="card" id="card" aria-live="polite">
+      <div class="prompt" id="prompt">…</div>
+      <p class="hint" id="hint">Do you remember this word?</p>
+      <div class="reveal" id="reveal" hidden></div>
+    </section>
+
+    <!-- Session summary -->
+    <section class="card summary" id="summary" hidden>
+      <h2 class="summary-title" id="summaryTitle">Session complete</h2>
+      <p class="summary-sub" id="summarySub">0 cards reviewed</p>
+
+      <div class="stats" id="stats">
+        <div class="stat remember">
+          <span class="stat-value" id="statRemember">0</span>
+          <span class="stat-label">Remembered</span>
+        </div>
+        <div class="stat partial">
+          <span class="stat-value" id="statPartial">0</span>
+          <span class="stat-label">Partial</span>
+        </div>
+        <div class="stat forgot">
+          <span class="stat-value" id="statForgot">0</span>
+          <span class="stat-label">Forgot</span>
+        </div>
+      </div>
+
+      <a class="btn btn-primary summary-btn" href="/">Back to main</a>
+    </section>
+
+    <div class="controls one" id="revealControls">
+      <button class="btn btn-primary" type="button" id="showAnswerBtn">Show answer</button>
+    </div>
+
+    <div class="controls two" id="ratingControls" hidden>
+      <button class="btn rate forgot"   type="button" data-rating="forgot">Forgot</button>
+      <button class="btn rate remember" type="button" data-rating="remember">Remember</button>
+    </div>
+
+    <div class="controls one" id="nextControls" hidden>
+      <button class="btn btn-primary" type="button" id="nextBtn">Next card</button>
+    </div>
+
+    <p class="kbd-hint" id="kbd-hint">
+      <kbd>Space</kbd> show answer / next · <kbd>1</kbd> forgot · <kbd>2</kbd> remember
+  </main>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const API = {
+      cards:  '/api/cards/random',
+      review: '/api/reviews/save'
+    };
+
+    const BATCH_SIZE = 20;
+
+    const RATINGS = {
+      forgot:   { grade: 0, label: 'Forgot' },
+      remember: { grade: 1, label: 'Remember' }
+    };
+
+    const POS_LABELS = {
+      a: 'adjective', n: 'noun',     v: 'verb',       d: 'adverb',
+      p: 'preposition', c: 'conjunction', m: 'numeral', q: 'classifier',
+      r: 'pronoun', t: 'time word',  f: 'direction',  s: 'place',
+      x: 'other'
+    };
+
+    /* DOM — note the kbd hint id matches the markup: kbd-hint */
+    const cardEl         = document.getElementById('card');
+    const promptEl       = document.getElementById('prompt');
+    const hintEl         = document.getElementById('hint');
+    const revealEl       = document.getElementById('reveal');
+    const counterEl      = document.getElementById('counter');
+    const ratingControls = document.getElementById('ratingControls');
+    const nextControls   = document.getElementById('nextControls');
+    const nextBtn        = document.getElementById('nextBtn');
+    const kbdHint        = document.getElementById('kbd-hint');   // fixed
+
+    const summaryEl      = document.getElementById('summary');
+    const summaryTitle   = document.getElementById('summaryTitle');
+    const summarySub     = document.getElementById('summarySub');
+    const statRemember   = document.getElementById('statRemember');
+    const statPartial    = document.getElementById('statPartial');
+    const statForgot     = document.getElementById('statForgot');
+    const statsEl        = document.getElementById('stats');
+    const showAnswerBtn  = document.getElementById('showAnswerBtn');
+    const revealControls = document.getElementById('revealControls');
+
+    const state = {
+      deck: [],
+      batchTotal: 0,
+      card: null,
+      revealed: false,
+      loading: false,
+      finished: false,
+      shown: 0,
+      startTime: 0,
+      lastRating: null,
+      results: { forgot: 0, partial: 0, remember: 0 }
+    };
+
+    const reviewedCount = () => {
+      const r = state.results;
+      return r.forgot + r.partial + r.remember;
+    };
+
+    async function bootstrapCsrf() {
+      try {
+        await fetch('/api/csrf', { credentials: 'same-origin' });
+      } catch (err) {
+        console.warn('[test-run] CSRF bootstrap failed —', err.message);
+      }
+    }
+
+    (async () => {
+      await bootstrapCsrf();
+      init();
+    })();
+
+    /* ---------------- Tiny DOM helpers ---------------- */
+    function el(tag, cls, text) {
+      const node = document.createElement(tag);
+      if (cls) node.className = cls;
+      if (text != null) node.textContent = text;
+      return node;
+    }
+
+    function chip(text, cls) {
+      return el('span', 'chip' + (cls ? ' ' + cls : ''), text);
+    }
+
+    const KBD_HINTS = {
+      reveal: '<kbd>Space</kbd> show answer',
+      rate:   '<kbd>1</kbd> forgot · <kbd>2</kbd> remember',
+      next:   '<kbd>Space</kbd> next card'
+    };
+
+    function setKbdHint(mode) {
+      if (!kbdHint) return;                    // belt and braces
+      const html = KBD_HINTS[mode];
+      if (html) {
+        kbdHint.innerHTML = html;
+        kbdHint.hidden = false;
+      } else {
+        kbdHint.replaceChildren();
+        kbdHint.hidden = true;
+      }
+    }
+
+    /* ---------------- Batch loading ---------------- */
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    async function fetchBatch() {
+      try {
+        const res = await fetch(`${API.cards}?count=${BATCH_SIZE}`, {
+          headers: { Accept: 'application/json' }
+        });
+
+        if (res.status === 204) return [];
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('json')) {
+          throw new Error('not JSON (' + (contentType || 'no content-type') + ')');
+        }
+
+        const data = await res.json();
+
+        if (Array.isArray(data)) {
+          return data.filter(card => card && card.simplified);
+        }
+
+        throw new Error('unexpected payload shape');
+      } catch (err) {
+        console.info('[test-run] unable to find cards —', err.message);
+        return [];                             // was `return;` → undefined
+      }
+    }
+
+    /* ---------------- Card rendering ---------------- */
+    function formBlock(form, card) {
+      const box = el('div', 'form-block');
+
+      const head = el('div', 'form-head');
+      head.append(el('span', 'form-trad', form.traditional || card.simplified || ''));
+      if (form.pinyin) head.append(el('span', 'form-pinyin', form.pinyin));
+      box.append(head);
+
+      if (form.meanings && form.meanings.length) {
+        const list = el('ul', 'meanings');
+        form.meanings.forEach(m => list.append(el('li', null, m)));
+        box.append(list);
+      }
+
+      if (form.classifiers && form.classifiers.length) {
+        const cl = el('div', 'classifiers');
+        cl.append(el('span', 'label', 'Classifier: '));
+        cl.append(el('span', null, form.classifiers.join(' · ')));
+        box.append(cl);
+      }
+
+      return box;
+    }
+
+    function wordChip(item) {
+      if (typeof item === 'string') return el('span', 'word-chip', item);
+
+      const c = el('span', 'word-chip');
+      const main = item.simplified || item.traditional || item.word || '';
+      if (main) c.append(el('span', 'wc-main', main));
+      if (item.pinyin) c.append(el('span', 'wc-py', item.pinyin));
+
+      const meanings = (item.meanings || []).join('; ');
+      if (meanings) c.append(el('span', 'wc-mean', meanings));
+
+      if (!c.children.length) c.textContent = JSON.stringify(item);
+      return c;
+    }
+
+    function buildReveal(card, rating) {
+      const frag = document.createDocumentFragment();
+
+      if (rating && RATINGS[rating]) {
+        frag.append(el('div', 'rating-pill ' + rating, RATINGS[rating].label));
+      }
+
+      const meta = el('div', 'meta');
+      if (card.level) meta.append(chip('HSK ' + card.level, 'level'));
+      if (typeof card.frequency === 'number') meta.append(chip('#' + card.frequency));
+      (card.pos || []).forEach(p => {
+        const c = chip(POS_LABELS[p] || p);
+        c.title = p;
+        meta.append(c);
+      });
+      if (meta.children.length) frag.append(meta);
+
+      const forms = (card.forms && card.forms.length)
+        ? card.forms
+        : [{
+            traditional: card.traditional || card.simplified,
+            pinyin: card.pinyin || '',
+            meanings: card.meanings || [],
+            classifiers: card.classifiers || []
+          }];
+      forms.forEach(f => frag.append(formBlock(f, card)));
+
+      if (card.words && card.words.length) {
+        const wrap = el('div', 'words');
+        wrap.append(el('div', 'section-label', 'Related words'));
+        const list = el('div', 'word-list');
+        card.words.forEach(w => list.append(wordChip(w)));
+        wrap.append(list);
+        frag.append(wrap);
+      }
+
+      return frag;
+    }
+
+    /* ---------------- Flow ---------------- */
+    async function init() {
+      state.loading = true;
+      promptEl.textContent = '…';
+      hintEl.hidden = true;
+      counterEl.textContent = 'Loading…';
+
+      const cards = await fetchBatch();
+      state.deck = cards;
+      state.batchTotal = cards.length;
+      state.loading = false;
+
+      if (!cards.length) {
+        showSummary();
+        return;
+      }
+
+      showNext();
+    }
+
+    async function showNext() {
+      if (state.loading || state.finished) return;
+      state.loading = true;
+
+      promptEl.textContent = '…';
+      hintEl.hidden = true;
+      revealEl.hidden = true;
+      revealEl.replaceChildren();
+      revealControls.hidden = true;
+      ratingControls.hidden = true;
+      nextControls.hidden = true;
+
+      const card = state.deck.shift();
+      if (!card) {
+        state.loading = false;          // was left true
+        showSummary();
+        return;
+      }
+
+      state.card = card;
+      state.revealed = false;
+      state.lastRating = null;
+      state.startTime = performance.now();
+      state.shown++;
+
+      promptEl.textContent = card.simplified || '—';
+      hintEl.hidden = false;
+      hintEl.textContent = 'Try to recall it, then reveal the answer.';
+      revealControls.hidden = false;
+
+      updateCounter();
+      setKbdHint('reveal');
+
+      state.loading = false;
+    }
+
+    function reveal() {
+      if (state.finished || state.revealed || !state.card) return;
+      state.revealed = true;
+
+      hintEl.hidden = true;
+      revealEl.replaceChildren(buildReveal(state.card, null));
+      revealEl.hidden = false;
+      revealControls.hidden = true;
+      ratingControls.hidden = false;
+      setKbdHint('rate');
+    }
+
+    function rate(rating) {
+      if (state.finished || !state.revealed || state.lastRating || !state.card) return;
+
+      const meta = RATINGS[rating];
+      if (!meta) return;
+
+      state.lastRating = rating;
+      state.results[rating] += 1;
+
+      revealEl.prepend(el('div', 'rating-pill ' + rating, meta.label));
+
+      submitReview({
+        simplified: state.card.simplified,
+        level: state.card.level ?? null,
+        grade: meta.grade,
+        reviewedAt: new Date().toISOString().slice(0, 19).replace('T', ' ')
+      });
+
+      updateCounter();
+      ratingControls.hidden = true;
+      nextControls.hidden = false;
+      nextBtn.focus({ preventScroll: true });
+      setKbdHint('next');
+    }
+
+    function updateCounter() {
+      const reviewed = reviewedCount();
+      const total = state.batchTotal;
+      counterEl.textContent = total
+        ? `Card ${Math.min(state.shown, total)} / ${total} · ${reviewed} reviewed`
+        : `${reviewed} reviewed`;
+    }
+
+    /* ---------------- Summary ---------------- */
+    function showSummary() {
+      state.finished = true;
+
+      cardEl.hidden = true;
+      revealControls.hidden = true;
+      ratingControls.hidden = true;
+      nextControls.hidden = true;
+      setKbdHint(null);
+
+      const total = reviewedCount();
+
+      summaryTitle.textContent = total ? 'Session complete' : 'No cards available';
+      summarySub.textContent = total
+        ? `${total} card${total === 1 ? '' : 's'} reviewed`
+        : 'Nothing to study right now';
+
+      statRemember.textContent = state.results.remember;
+      statPartial.textContent  = state.results.partial;
+      statForgot.textContent   = state.results.forgot;
+      statsEl.hidden = total === 0;
+
+      counterEl.textContent = 'Session complete';
+      summaryEl.hidden = false;
+    }
+
+    /* ---------------- Submitting ---------------- */
+    const offlineQueue = [];
+
+    function readCookie(name) {
+      return document.cookie.split('; ')
+        .find(c => c.startsWith(name + '='))?.split('=')[1] ?? '';
+    }
+
+    async function submitReview(payload) {
+      try {
+        const res = await fetch(API.review, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-XSRF-TOKEN': readCookie('XSRF-TOKEN')
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        console.debug('[test-run] review sent', payload);
+      } catch (err) {
+        offlineQueue.push(payload);
+        console.warn('[test-run] review kept locally —', err.message, payload);
+      }
+    }
+
+    /* ---------------- Events ---------------- */
+    ratingControls.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-rating]');
+      if (btn) rate(btn.dataset.rating);
+    });
+
+    showAnswerBtn.addEventListener('click', reveal);
+    nextBtn.addEventListener('click', showNext);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (state.finished) return;                       // summary is showing
+
+      const onButton = document.activeElement && document.activeElement.tagName === 'BUTTON';
+      if ((e.key === 'Enter' || e.key === ' ') && onButton) return;
+
+      if (!state.revealed) {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          reveal();
+        }
+        return;
+      }
+
+      if (!state.lastRating) {
+        if (e.key === '1') { e.preventDefault(); rate('forgot'); }
+        if (e.key === '2') { e.preventDefault(); rate('remember'); }
+        return;
+      }
+
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        showNext();
+      }
+    });
+
+    /* No trailing init() here — the bootstrap IIFE above already calls it. */
+  })();
+  </script>
+
+</body>
+</html>
