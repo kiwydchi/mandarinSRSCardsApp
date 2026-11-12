@@ -44,7 +44,7 @@ body {
   font-size: clamp(1.75rem, 5vw, 2.5rem);
   font-weight: 800;
   letter-spacing: 0.04em;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: var(--accent-2);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -116,14 +116,11 @@ form {
               background 0.18s ease, color 0.18s ease;
 }
 
-.rate.forgot   { border-color: rgba(251, 113, 133, .55); background: rgb(37, 12, 16);}
+.rate.forgot   { border-color: rgba(251, 113, 133, .55); background: rgb(173, 12, 12);}
 .rate.forgot:hover   { background: rgba(251, 113, 133, .12); }
 
-.rate.partial  { border-color: rgba(251, 191, 36, .55); background: rgb(66, 63, 30);}
-.rate.partial:hover  { background: rgba(251, 191, 36, .12); }
-
-.rate.remember { border-color: rgba(94, 234, 212, .6); background: rgb(18, 34, 49);}
-.rate.remember:hover { background: rgba(94, 234, 212, .12); }
+.rate.remember { border-color: rgba(139, 125, 61, 0.6); background: rgb(184, 204, 70);}
+.rate.remember:hover { background: rgba(234, 225, 94, 0.12); }
 
 .btn:focus-visible {
   outline: 3px solid var(--accent-2);
@@ -133,7 +130,7 @@ form {
 .btn-primary {
   border: 2px solid transparent;
   color: #1a0505;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: var(--accent-2);
   box-shadow: 0 8px 24px rgba(56, 189, 248, 0.30);
 }
 
@@ -266,7 +263,7 @@ form {
 
 .chip.level {
   border: none;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: var(--accent);
   color: #05121a;
   font-weight: 700;
 }
@@ -367,7 +364,7 @@ form {
   font-size: clamp(1.5rem, 4.5vw, 2rem);
   font-weight: 800;
   letter-spacing: .03em;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: var(--accent-2);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
